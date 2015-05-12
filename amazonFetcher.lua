@@ -5,7 +5,7 @@ local JSON = require "luvit.json"
 local url = require "luvit.url"
 local http = require "luvit.http"
 local https = require "luvit.https"
-local base64 = require "base64"
+local base64 = require "luautil.base64"
 
 mq.exchange("amazonFetcher")
 

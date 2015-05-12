@@ -2,7 +2,7 @@ local mq = require "koh.mq"
 local gd = require "gd"
 local ffi = require "ffi"
 local fs = require "luvit.fs"
-local base64 = require "base64"
+local base64 = require "luautil.base64"
 local min = require "math".min
 local max = require "math".max
 local floor = require "math".floor
@@ -156,7 +156,7 @@ local function processSkin(data)
         return
     end
 
-    writeSkin(skinPath("skin", data.uuid), scaleUp(handle))
+    writeSkin(skinPath("skin", data.uuid), handle)
 
     local limits = {}
     limits.x = const.HeadX
@@ -184,7 +184,7 @@ local function processSkin(data)
     limits.height = const.TorsoHeight
 
     local torsoLayer = crop(handle, limits)
-    writeSkin(skinPath("torso", data.uuid), scaleUp(torsoLayer))
+    --writeSkin(skinPath("torso", data.uuid), scaleUp(torsoLayer))
 
     limits.width = max(const.HeadWidth, const.TorsoWidth)
     limits.height = const.TorsoHeight + const.HeadHeight
@@ -201,10 +201,10 @@ local function processSkin(data)
     limits.height = const.RightLegHeight
 
     local leftLeg = crop(handle, limits)
-    writeSkin(skinPath("leg", data.uuid), scaleUp(leftLeg))
+    --writeSkin(skinPath("leg", data.uuid), scaleUp(leftLeg))
 
     local rightLeg = flipX(leftLeg)
-    writeSkin(skinPath("leg", data.uuid .. "-right"), scaleUp(rightLeg))
+    --writeSkin(skinPath("leg", data.uuid .. "-right"), scaleUp(rightLeg))
 
     limits.width = max(const.HeadWidth, const.TorsoWidth, 2 * const.RightLegWidth)
     limits.height = const.TorsoHeight + const.HeadHeight + const.RightLegHeight
@@ -215,7 +215,7 @@ local function processSkin(data)
         {torsoLayer, 0, const.HeadHeight},
         head,
     })
-    writeSkin(skinPath("torso+head+legs", data.uuid), scaleUp(thinBody))
+    --writeSkin(skinPath("torso+head+legs", data.uuid), scaleUp(thinBody))
 
     limits.x = const.RightArmX
     limits.y = const.RightArmY
@@ -223,10 +223,10 @@ local function processSkin(data)
     limits.height = const.RightArmHeight
 
     local rightArm = crop(handle, limits)
-    writeSkin(skinPath("arm", data.uuid), scaleUp(rightArm))
+    --writeSkin(skinPath("arm", data.uuid), scaleUp(rightArm))
 
     local leftArm = flipX(rightArm)
-    writeSkin(skinPath("arm", data.uuid .. "-right"), scaleUp(leftArm))
+    --writeSkin(skinPath("arm", data.uuid .. "-right"), scaleUp(leftArm))
 
     limits.width = max(const.HeadWidth, const.TorsoWidth + 2 * const.RightArmWidth, 2 * const.RightLegWidth)
     limits.height = max(const.TorsoHeight + const.HeadHeight + const.RightLegHeight, const.RightArmHeight)
@@ -251,4 +251,4 @@ mq.listen({mq.QUEUE.IMAGE_PROCESSING}, function(consumer_tag, tag, data)
     else
         processSkin(data)
     end
-end, 50)
+end, 15)

@@ -26,7 +26,7 @@ local function packData(tag, data)
     return tag .. seperator .. JSON.stringify (data)
 end
 
-local conn = rb.connect_rabbit{host="localhost"}
+local conn = rb.connect_rabbit(dofile "mq.conf")
 
 rb.declare_queue(conn, QUEUE.GENERAL_PROCESSING,    { durable = 1 })
 rb.declare_queue(conn, QUEUE.MOJANG_API,            { durable = 1 })

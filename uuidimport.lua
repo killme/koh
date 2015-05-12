@@ -1,3 +1,4 @@
+local fs = require "luvit.fs"
 local table = require "table"
 local process = require "luvit.process"
 local ibmt = require "ibmt"
@@ -7,79 +8,9 @@ local createQueryBuilder = require "odbxuv.queryBuilder".createQueryBuilder
 local sql = odbxuv.Connection:new()
 local startupTask = ibmt.create()
 
-local BufferedStream = require "luvit.core".iStream:extend()
-
-function BufferedStream:initialize()
-    self.paused = true
-    self.buffer = {}
-    self.finished = false
-    self.pattern = "(.-)\n"
-    self.bufferPattern = "\n([^\n]*)$"
-    self.lastLine = ""
-    self.ended = false
-end
-
-function BufferedStream:write(data)
-    data = self.lastLine .. data
-    self.lastLine = ""
-
-    for line in data:gmatch(self.pattern) do
-        self:enQueue(line)
-    end
-
-    self.lastLine = data:gmatch(self.bufferPattern)()
-end
-
-function BufferedStream:enQueue(line)
-    if self.paused then
-        self.buffer[#self.buffer+1] = line
-    else
-        self:emit("line", line)
-    end
-end
-
-function BufferedStream:done()
-    if self.lastLine ~= "" then
-        self:enQueue(self.lastLine)
-        self.lastLine = ""
-    end
-
-    self.done = true
-
-    self:_checkEnd()
-end
-
-function BufferedStream:resume()
-    self.paused = false
-
-    for k, line in ipairs(self.buffer) do
-        table.remove(self.buffer, k)
-        self:emit("line", line)
-
-        if self.paused then
-            break
-        end
-    end
-
-    self:_checkEnd()
-end
-
-function BufferedStream:_checkEnd()
-    if not self.paused and self.done and #self.buffer == 0 then
-        self:emit("end")
-    end
-end
-
-function BufferedStream:pause()
-    self.paused = true
-end
-
-local bufferedStream = BufferedStream:new()
-
-process.stdin:pipe(bufferedStream)
-
-bufferedStream:on("line", function(uuid)
+local function import(uuid, cb)
     local q = createQueryBuilder(sql)
+    uuid = uuid:sub(0, 36)
 
     q:select("id")
     q:from("player")
@@ -102,7 +33,7 @@ bufferedStream:on("line", function(uuid)
 
             q:on("fetched", function()
                 q:close(function()
-                    bufferedStream:resume()
+                    cb()
                 end)
             end)
 
@@ -123,10 +54,7 @@ bufferedStream:on("line", function(uuid)
                                     q:close(function() end)
                                 else
                                     q:on("fetched", function()
-                                        p "FETCH"
-                                        q:close(function()
-                                            p "CLOSED B"
-                                        end)
+                                        q:close(function() end)
                                     end)
 
                                     q:on("fetch", function()
@@ -150,20 +78,29 @@ bufferedStream:on("line", function(uuid)
             q:fetch()
         end)
     end)
+end
 
+local processOne
+do
+    local t = fs.readdir(process.argv[1], 0)
+    local k, ent
 
-    bufferedStream:pause()
-end)
+    processOne = function()
+        k, ent = next(t, k)
 
-bufferedStream:on("end", function()
-    print "Shutting down ..."
-    sql:close()
-end)
+        if k ~= nil then
+            if ent.type == "FILE" then
+                import(ent.name, processOne)
+            else
+                processOne()
+            end
+        else
+            sql:close()
+        end
+    end
+end
 
-
-startupTask:on("finish", function()
-    bufferedStream:resume()
-end)
+startupTask:on("finish", processOne)
 
 startupTask:push()
 sql:connect (dofile("database.conf"), function(err, ...)
@@ -182,3 +119,4 @@ end)
 sql:on("close", function()
 
 end)
+

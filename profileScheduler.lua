@@ -6,7 +6,7 @@ local odbxuv = require "odbxuv"
 local mq = require "koh.mq"
 local createQueryBuilder = require "odbxuv.queryBuilder".createQueryBuilder
 local setTimeout = require "luvit.timer".setTimeout
-local epoch = require "epoch"
+local epoch = require "luautil.epoch"
 
 mq.exchange("profileScheduler")
 

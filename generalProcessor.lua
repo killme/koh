@@ -1,5 +1,5 @@
 local mq = require "koh.mq"
-local base64 = require "base64"
+local base64 = require "luautil.base64"
 local JSON = require "luvit.json"
 
 mq.exchange("generalProcessor")
