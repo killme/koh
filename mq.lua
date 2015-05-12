@@ -35,6 +35,7 @@ rb.declare_queue(conn, QUEUE.IMAGE_PROCESSING,      { durable = 1 })
 rb.declare_queue(conn, QUEUE.DATABASE_UPDATER,      { durable = 1 })
 
 local LOCAL_EXCHANGE
+local TARGET_QUEUE
 
 return {
     rb = rb,
@@ -62,17 +63,22 @@ return {
 
     exchange = function(name)
         LOCAL_EXCHANGE = name
-        rb.declare_exchange(conn, LOCAL_EXCHANGE, "fanout", { durable = 1 })
+        rb.declare_exchange(conn, LOCAL_EXCHANGE, "topic", { durable = 1 })
     end,
 
     write = function(tag, data)
-        rb.publish(conn, LOCAL_EXCHANGE, packData(tag, data))
+        rb.publish(conn, LOCAL_EXCHANGE, packData(tag, data), {
+            routingkey = TARGET_QUEUE .. "." .. tag,
+        })
     end,
 
     publish = function(queue, cb)
-        local boundQueue = rb.bind_queue(conn, queue, LOCAL_EXCHANGE)
+        TARGET_QUEUE = queue
+
+        local boundQueue = rb.bind_queue(conn, TARGET_QUEUE, LOCAL_EXCHANGE, {
+            bindingkey = TARGET_QUEUE .. ".*",
+        })
         cb()
-        boundQueue()
     end,
 
     listen = function(queues, cb, count)
